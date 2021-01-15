@@ -8,6 +8,6 @@ setup(
     description="Extensions to YAML syntax for better python interaction",
     author="Peter Plantinga, Aku Rouhe",
     author_email="speechbrain@gmail.com",
-    packages=["hyper"],
+    packages=["hyperyaml"],
     install_requires=["pyyaml", "ruamel.yaml"],
 )

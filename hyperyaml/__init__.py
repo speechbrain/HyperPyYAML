@@ -4,7 +4,13 @@ Authors:
  * Peter Plantinga 2020, 2021
  * Aku Rouhe 2020
 """
-import hyper.yaml
+from .core import (
+    load_hyperyaml,
+    resolve_references,
+    RefTag,
+    Placeholder,
+    dump_hyperyaml,
+)
 
 
 class TestThing:

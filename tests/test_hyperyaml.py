@@ -2,7 +2,7 @@ import pytest
 
 
 def test_load_hyperyaml(tmpdir):
-    from hyper.yaml import (
+    from hyperyaml import (
         load_hyperyaml,
         RefTag,
         Placeholder,
@@ -117,7 +117,7 @@ def test_load_hyperyaml(tmpdir):
         a: 3
         b: 5
     thing2: !ref <thing1>
-    thing3: !new:hyper.TestThing
+    thing3: !new:hyperyaml.TestThing
         - !ref <thing1>
         - abc
     """
@@ -167,7 +167,7 @@ def test_load_hyperyaml(tmpdir):
     common_kwargs:
         thing1: !ref <a.lower>
         thing2: 2
-    c: !apply:hyper.TestThing.from_keys
+    c: !apply:hyperyaml.TestThing.from_keys
         args:
             - 1
             - 2
@@ -181,7 +181,7 @@ def test_load_hyperyaml(tmpdir):
     yaml = """
     thing1: "A string"
     thing2: !ref <thing1.lower>
-    thing3: !new:hyper.TestThing
+    thing3: !new:hyperyaml.TestThing
         - !ref <thing1.lower>
         - abc
     """
