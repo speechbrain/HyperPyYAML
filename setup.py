@@ -13,6 +13,6 @@ setuptools.setup(
     url="https://github.com/speechbrain/HyperPyYAML",
     author="Peter Plantinga, Aku Rouhe",
     author_email="speechbrain@gmail.com",
-    packages=["hypyaml"],
+    packages=["hyperpyyaml"],
     install_requires=["pyyaml", "ruamel.yaml"],
 )

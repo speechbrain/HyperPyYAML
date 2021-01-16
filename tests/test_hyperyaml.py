@@ -1,12 +1,12 @@
 import pytest
 
 
-def test_load_hyperyaml(tmpdir):
-    from hyperyaml import (
-        load_hyperyaml,
+def test_load_hyperpyyaml(tmpdir):
+    from hyperpyyaml import (
+        load_hyperpyyaml,
         RefTag,
         Placeholder,
-        dump_hyperyaml,
+        dump_hyperpyyaml,
     )
 
     # Basic functionality
@@ -14,20 +14,20 @@ def test_load_hyperyaml(tmpdir):
     a: 1
     thing: !new:collections.Counter {}
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["a"] == 1
     from collections import Counter
 
     assert things["thing"].__class__ == Counter
 
     overrides = {"a": 2}
-    things = load_hyperyaml(yaml, overrides=overrides)
+    things = load_hyperpyyaml(yaml, overrides=overrides)
     assert things["a"] == 2
     overrides = "{a: 2}"
-    things = load_hyperyaml(yaml, overrides=overrides)
+    things = load_hyperpyyaml(yaml, overrides=overrides)
     assert things["a"] == 2
     overrides = "{thing: !new:collections.Counter {b: 3}}"
-    things = load_hyperyaml(yaml, overrides=overrides)
+    things = load_hyperpyyaml(yaml, overrides=overrides)
     assert things["thing"]["b"] == 3
 
     # String replacement
@@ -40,7 +40,7 @@ def test_load_hyperyaml(tmpdir):
         - !ref <a>
         - abc
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing"]["a"] == things["a"]
     assert things["a"] == things["b"]
     assert next(things["thing2"]) == ("a", "a")
@@ -50,7 +50,7 @@ def test_load_hyperyaml(tmpdir):
     a: "a"
     b: !ref <a>/b
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["b"] == "a/b"
 
     # Substitution with string conversion
@@ -58,7 +58,7 @@ def test_load_hyperyaml(tmpdir):
     a: 1
     b: !ref <a>/b
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["b"] == "1/b"
 
     # Nested structures:
@@ -69,7 +69,7 @@ def test_load_hyperyaml(tmpdir):
         other: !new:collections.Counter
             a: !ref <constants[a]>
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing"]["other"].__class__ == Counter
     assert things["thing"]["other"]["a"] == things["constants"]["a"]
 
@@ -79,7 +79,7 @@ def test_load_hyperyaml(tmpdir):
     thing: !new:collections.Counter
         - !ref <a>
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing"]["l"] == 2
 
     # Invalid class
@@ -87,7 +87,7 @@ def test_load_hyperyaml(tmpdir):
     thing: !new:abcdefg.hij
     """
     with pytest.raises(ImportError):
-        things = load_hyperyaml(yaml)
+        things = load_hyperpyyaml(yaml)
 
     # Invalid reference
     yaml = """
@@ -96,7 +96,7 @@ def test_load_hyperyaml(tmpdir):
         b: !ref <constants[c]>
     """
     with pytest.raises(ValueError):
-        things = load_hyperyaml(yaml)
+        things = load_hyperpyyaml(yaml)
 
     # Anchors and aliases
     yaml = """
@@ -107,7 +107,7 @@ def test_load_hyperyaml(tmpdir):
         <<: *thing
         b: 7
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing1"]["a"] == things["thing2"]["a"]
     assert things["thing1"]["b"] != things["thing2"]["b"]
 
@@ -117,11 +117,11 @@ def test_load_hyperyaml(tmpdir):
         a: 3
         b: 5
     thing2: !ref <thing1>
-    thing3: !new:hyperyaml.TestThing
+    thing3: !new:hyperpyyaml.TestThing
         - !ref <thing1>
         - abc
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing2"]["b"] == things["thing1"]["b"]
     things["thing2"]["b"] = 7
     assert things["thing2"]["b"] == things["thing1"]["b"]
@@ -134,7 +134,7 @@ def test_load_hyperyaml(tmpdir):
         b: 5
     thing2: !copy <thing1>
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing2"]["b"] == things["thing1"]["b"]
     things["thing2"]["b"] = 7
     assert things["thing2"]["b"] != things["thing1"]["b"]
@@ -143,7 +143,7 @@ def test_load_hyperyaml(tmpdir):
     yaml = """
     Counter: !name:collections.Counter
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     counter = things["Counter"]()
     assert counter.__class__ == Counter
 
@@ -151,14 +151,14 @@ def test_load_hyperyaml(tmpdir):
     yaml = """
     mod: !module:collections
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["mod"].__name__ == "collections"
 
     # Apply tag
     yaml = """
     a: !apply:sum [[1, 2]]
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["a"] == 3
 
     # Apply method
@@ -167,13 +167,13 @@ def test_load_hyperyaml(tmpdir):
     common_kwargs:
         thing1: !ref <a.lower>
         thing2: 2
-    c: !apply:hyperyaml.TestThing.from_keys
+    c: !apply:hyperpyyaml.TestThing.from_keys
         args:
             - 1
             - 2
         kwargs: !ref <common_kwargs>
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["c"].kwargs["thing1"]() == "a string"
     assert things["c"].specific_key() == "a string"
 
@@ -181,11 +181,11 @@ def test_load_hyperyaml(tmpdir):
     yaml = """
     thing1: "A string"
     thing2: !ref <thing1.lower>
-    thing3: !new:hyperyaml.TestThing
+    thing3: !new:hyperpyyaml.TestThing
         - !ref <thing1.lower>
         - abc
     """
-    things = load_hyperyaml(yaml)
+    things = load_hyperpyyaml(yaml)
     assert things["thing2"]() == "a string"
     assert things["thing3"].args[0]() == "a string"
 
@@ -194,7 +194,7 @@ def test_load_hyperyaml(tmpdir):
     a: !PLACEHOLDER
     """
     with pytest.raises(ValueError) as excinfo:
-        things = load_hyperyaml(yaml)
+        things = load_hyperpyyaml(yaml)
     assert str(excinfo.value) == "'a' is a !PLACEHOLDER and must be replaced."
 
     # Import
@@ -219,7 +219,7 @@ def test_load_hyperyaml(tmpdir):
     d: !ref <import[c]>
     """
 
-    things = load_hyperyaml(yaml, {"b": 3})
+    things = load_hyperpyyaml(yaml, {"b": 3})
     assert things["a"] == things["b"]
     assert things["import"]["c"] == 1
     assert things["d"] == things["import"]["c"]
@@ -233,7 +233,7 @@ def test_load_hyperyaml(tmpdir):
     from io import StringIO
 
     stringio = StringIO()
-    dump_hyperyaml(dump_dict, stringio)
+    dump_hyperpyyaml(dump_dict, stringio)
     assert stringio.getvalue() == (
         "data_folder: !PLACEHOLDER\nexamples:\n"
         "  ex1: !ref <data_folder>/ex1.wav\n"
