@@ -1,15 +1,15 @@
-"""Hyper YAML -- an extended yaml syntax for use with python.
+"""HyperPyYAML -- an extended yaml syntax for use with python.
 
 Authors:
  * Peter Plantinga 2020, 2021
  * Aku Rouhe 2020
 """
 from .core import (
-    load_hyperyaml,
+    load_hyperpyyaml,
     resolve_references,
     RefTag,
     Placeholder,
-    dump_hyperyaml,
+    dump_hyperpyyaml,
 )
 
 

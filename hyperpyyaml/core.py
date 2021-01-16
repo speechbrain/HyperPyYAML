@@ -1,4 +1,4 @@
-"""This library gathers utilities for hyperyaml loading
+"""This library gathers utilities for hyperpyyaml loading
 
 Authors
  * Peter Plantinga 2020
@@ -21,16 +21,16 @@ from io import StringIO
 
 # NOTE: Empty dict as default parameter is fine here since overrides are never
 # modified
-def load_hyperyaml(
+def load_hyperpyyaml(
     yaml_stream, overrides=None, overrides_must_match=True,
 ):
-    r'''This function implements the SpeechBrain hyperYAML syntax
+    r'''This function implements the HyperPyYAML syntax
 
     The purpose for this syntax is a compact, structured hyperparameter and
     function definition. This function implements a few extensions to the yaml
     syntax, listed below.
 
-    **Pyyaml complex tag shortcuts**
+    **PyYAML complex tag shortcuts**
 
     Part of our clean structured hyperparameter interface is being able to
     specify python objects easily and cleanly. This is possible with
@@ -145,7 +145,7 @@ def load_hyperyaml(
     ... thing: !new:collections.Counter
     ...     b: !ref <a>
     ... """
-    >>> params = load_hyperyaml(yaml_string)
+    >>> params = load_hyperpyyaml(yaml_string)
     >>> params["thing"]
     Counter({'b': 3})
     '''
@@ -203,7 +203,7 @@ class RefTag:
 
     Example
     -------
-    See ``dump_hyperyaml``
+    See ``dump_hyperpyyaml``
     """
 
     yaml_tag = "!ref"
@@ -221,7 +221,7 @@ class Placeholder:
 
     Example
     -------
-    See ``dump_hyperyaml``
+    See ``dump_hyperpyyaml``
     """
 
     yaml_tag = "!PLACEHOLDER"
@@ -231,7 +231,7 @@ class Placeholder:
         return representer.represent_scalar(cls.yaml_tag, "")
 
 
-def dump_hyperyaml(yaml_tree, output_stream, *args, **kwargs):
+def dump_hyperpyyaml(yaml_tree, output_stream, *args, **kwargs):
     r"""Dump yaml including placeholder and reference tags.
 
     Arguments
@@ -247,7 +247,7 @@ def dump_hyperyaml(yaml_tree, output_stream, *args, **kwargs):
     -------
     >>> to_yaml = {'a': Placeholder(), 'b': RefTag('<a>')}
     >>> stringio = StringIO()
-    >>> dump_hyperyaml(to_yaml, stringio)
+    >>> dump_hyperpyyaml(to_yaml, stringio)
     >>> stringio.getvalue()
     'a: !PLACEHOLDER\nb: !ref <a>\n'
     """
@@ -258,19 +258,19 @@ def dump_hyperyaml(yaml_tree, output_stream, *args, **kwargs):
 
 
 def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
-    r'''Resolves inter-document references, a component of hyperYAML.
+    r'''Resolves inter-document references, a component of HyperPyYAML.
 
     Arguments
     ---------
     yaml_stream : stream
         A file-like object or string with the contents of a yaml file
-        written with the hyperYAML syntax.
+        written with the HyperPyYAML syntax.
     overrides : mapping or str
         Replacement values, either in a yaml-formatted string or a dict.
     overrides_must_match : bool
         Whether an error will be thrown when an override does not match
         a corresponding key in the yaml_stream. This is the opposite
-        default from ``load_hyperyaml`` because ``resolve_references``
+        default from ``load_hyperpyyaml`` because ``resolve_references``
         doesn't need to be as strict by default.
 
     Returns

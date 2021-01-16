@@ -10,11 +10,11 @@ up python files for data analysis to just the bare algorithm.
 
 ### Table of Contents
 * [YAML basics](#yaml-basics)
-* [Hyper YAML](#hyper-yaml)
+* [HyperPyYAML](#hyperpyyaml)
     * [Objects](#objects)
     * [Aliases](#aliases)
     * [Tuples](#tuples)
-* [How to use Hyper YAML](#how-to-use-hyper-yaml)
+* [How to use HyperPyYAML](#how-to-use-hyperpyyaml)
 * [Conclusion](#conclusion)
 
 YAML basics
@@ -92,10 +92,10 @@ few additional types, such as:
 These can all be quite useful, however we found that this system was a bit
 cumbersome, especially with the frequency with which we were using them. So
 we decided to implement some shortcuts for these features, which we are
-calling "Hyper YAML".
+calling "HyperPyYAML".
 
-Hyper YAML
-----------
+HyperPyYAML
+-----------
 
 We make several extensions to yaml including easier object creation, nicer
 aliases, and tuples.
@@ -133,7 +133,7 @@ add: !name:operator.add
 This code stores the `add` function. It can later be used in the usual way:
 
 ```python
->>> loaded_yaml = load_hyperyaml("add: !name:operator.add")
+>>> loaded_yaml = load_hyperpyyaml("add: !name:operator.add")
 >>> loaded_yaml["add"](2, 4)
 6
 ```
@@ -178,7 +178,7 @@ foo: !new:collections.Counter
 bar: !ref <foo>
 baz: !copy <foo>
 """
-loaded_yaml = load_hyperyaml(yaml_string)
+loaded_yaml = load_hyperpyyaml(yaml_string)
 loaded_yaml["foo"].update({"b": 10})
 print(loaded_yaml["bar"])
 print(loaded_yaml["baz"])
@@ -200,13 +200,13 @@ resolve any string starting with `(` and ending with `)` to a tuple.
 This makes the use of YAML more intuitive for Python users.
 
 
-How to use Hyper YAML
+How to use HyperPyYAML
 ---------------------
 
 All of the listed extensions are available by loading yaml using the
-`load_hyperyaml` function. This function returns an object in a similar
+`load_hyperpyyaml` function. This function returns an object in a similar
 manner to pyyaml and other yaml libraries.
-Also, `load_hyperyaml` takes an optional argument, `overrides`
+Also, `load_hyperpyyaml` takes an optional argument, `overrides`
 which allows changes to any of the parameters listed in the YAML.
 The following example demonstrates changing the `out_channels`
 of the CNN layer:
@@ -223,7 +223,7 @@ of the CNN layer:
 ... """
 >>> overrides = {"block_index": 2}
 >>> with open("hyperparameters.yaml") as f:
-...    hyperparameters = load_hyperyaml(f, overrides)
+...    hyperparameters = load_hyperpyyaml(f, overrides)
 >>> hyperparameters["block_index"]
 2
 >>> hyperparameters["cnn2"]["out_channels"]
