@@ -6,7 +6,7 @@ with open("README.md") as f:
 
 setuptools.setup(
     name="HyperPyYAML",
-    version="0.0.1",
+    version="1.0.0",
     description="Extensions to YAML syntax for better python interaction",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -14,5 +14,5 @@ setuptools.setup(
     author="Peter Plantinga, Aku Rouhe",
     author_email="speechbrain@gmail.com",
     packages=["hyperpyyaml"],
-    install_requires=["pyyaml", "ruamel.yaml"],
+    install_requires=["pyyaml>=5.1", "ruamel.yaml>=0.15"],
 )
