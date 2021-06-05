@@ -238,3 +238,35 @@ def test_load_hyperpyyaml(tmpdir):
         "data_folder: !PLACEHOLDER\nexamples:\n"
         "  ex1: !ref <data_folder>/ex1.wav\n"
     )
+
+
+def _concat(a, b):
+    result = dict(a)
+    result.update(b)
+    return result
+
+
+def test_ruamel_anchor_bug():
+    from hyperpyyaml import load_hyperpyyaml
+    yaml_string = """
+        r1: &ref001 "abc"
+        a: &id010
+          e: 42
+          f: 56
+
+        b: &id001 !new:collections.Counter
+          - abcd
+
+        d: !apply:test_hyperyaml._concat
+          - *id010
+          - *id001
+
+        r2: *ref001
+
+        """
+    result = load_hyperpyyaml(yaml_string)
+    for key in 'abcdef':
+        assert key in result['d']
+    assert result['b']['c'] == 1
+    assert result['d']['e'] == 42
+    assert result['r2'] == "abc"

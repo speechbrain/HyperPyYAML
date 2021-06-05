@@ -257,6 +257,90 @@ def dump_hyperpyyaml(yaml_tree, output_stream, *args, **kwargs):
     ruamel_yaml.dump(yaml_tree, output_stream, *args, **kwargs)
 
 
+RE_PREFIX_ID = re.compile('^id')
+PREFIX_REF = "ref"
+ATTRIBUTE_ANCHOR = "anchor"
+
+
+def _replace_anchors(yaml_stream):
+    """Replace anchors starting with 'id' with 'ref'. This is a
+    workaround for a known bug in ruamel that causes the identifier
+    "id010" to be replaced with "id001"
+
+    Arguments
+    ---------
+    yaml_stream: stream
+        a stream or string with yaml
+
+    Returns
+    -------
+    yaml: str
+        The Yaml with anchors replaced
+    """
+    events = yaml.parse(yaml_stream)
+    updated_events = _replace_anchor_events(events)
+    return yaml.emit(updated_events)
+
+
+def _replace_anchor_events(events):
+    """Replace anchors prefixed with "id" with equivalent
+    ones prefixed with "ref" in a stream of events
+
+    Arguments
+    ---------
+    events: sequence
+        a sequence or generator of pyyaml parse events
+
+    Returns
+    -------
+    result: sequence
+        a sequence of events with anchors replaced
+    """
+
+    used_anchors = set()
+    anchor_map = {}
+    for event in events:
+        anchor = getattr(event, ATTRIBUTE_ANCHOR, None)
+        if anchor is not None:
+            if isinstance(event, yaml.AliasEvent):
+                new_anchor = anchor_map[anchor]
+            else:
+                new_anchor = RE_PREFIX_ID.sub(PREFIX_REF, anchor)
+                new_anchor = _make_anchor_unique(new_anchor, used_anchors)
+                used_anchors.add(new_anchor)
+                anchor_map[anchor] = new_anchor
+            event.anchor = new_anchor
+
+        yield event
+
+
+def _make_anchor_unique(anchor, used_anchors):
+    """Ensures the uniqueness of a newly assigned anchor by adding
+    numbered suffixes until an unused suffix is found.
+
+    Arguments
+    ---------
+    anchor: str
+        the candidate anchor name
+
+    used_anchors: set
+        a set of anchors that have already been used
+
+    Returns
+    -------
+    unique_anchor: str
+        an anchor not found in used_anhors
+    """
+    # NOTE: the approach is naive/brute-force, it assumes
+    # that clashes are infrequent
+    unique_anchor = anchor
+    suffix = 1
+    while unique_anchor in used_anchors:
+        unique_anchor = f'{anchor}_{suffix}'
+        suffix += 1
+    return unique_anchor
+
+
 def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
     r'''Resolves inter-document references, a component of HyperPyYAML.
 
@@ -293,6 +377,11 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
     file_path = None
     if hasattr(yaml_stream, "name"):
         file_path = os.path.dirname(os.path.realpath(yaml_stream.name))
+
+    # Replace the "id" prefix with an equivalent "ref" prefix
+    # in all anchors to prevent clashes due to a ruamel.yaml
+    # bug
+    yaml_stream = _replace_anchors(yaml_stream)
 
     # Load once to store references and apply overrides
     # using ruamel.yaml to preserve the tags
