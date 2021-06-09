@@ -14,5 +14,5 @@ setuptools.setup(
     author="Peter Plantinga, Aku Rouhe",
     author_email="speechbrain@gmail.com",
     packages=["hyperpyyaml"],
-    install_requires=["pyyaml>=5.1", "ruamel.yaml>=0.15"],
+    install_requires=["pyyaml>=5.1", "ruamel.yaml>=0.17.8"],
 )
