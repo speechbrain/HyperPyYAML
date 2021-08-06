@@ -449,7 +449,9 @@ def _construct_name(loader, callable_string, node):
 
     try:
         args, kwargs = _load_node(loader, node)
-        return functools.partial(name, *args, **kwargs)
+        if args or kwargs:
+            return functools.partial(name, *args, **kwargs)
+        return name
     except TypeError as e:
         err_msg = "Invalid argument to callable %s" % callable_string
         e.args = (err_msg, *e.args)
