@@ -238,3 +238,22 @@ def test_load_hyperpyyaml(tmpdir):
         "data_folder: !PLACEHOLDER\nexamples:\n"
         "  ex1: !ref <data_folder>/ex1.wav\n"
     )
+
+    # !include with override
+    yaml_1_path = os.path.join(tmpdir, 'f1.yaml')
+    yaml_2_path = os.path.join(tmpdir, 'f2.yaml')
+
+    yaml_1_content = f'''
+    k1: v1
+    k2: !include:{yaml_2_path}
+    '''
+    yaml_2_content = f'k3: v3'
+
+    with open(yaml_2_path, 'w') as f:
+        f.write(yaml_2_content)
+
+    loaded_yaml_1 = load_hyperpyyaml(yaml_1_content, overrides='k1: new_v1')
+    print(loaded_yaml_1)
+
+    assert loaded_yaml_1.get('k1') == 'new_v1'  # 'v1' is overridden by 'new_v1
+    assert loaded_yaml_1['k2'].get('k1') is None  # no unexpected key inserted to the included yaml file
