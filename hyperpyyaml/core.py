@@ -21,9 +21,7 @@ from io import StringIO
 
 # NOTE: Empty dict as default parameter is fine here since overrides are never
 # modified
-def load_hyperpyyaml(
-    yaml_stream, overrides=None, overrides_must_match=True,
-):
+def load_hyperpyyaml(yaml_stream, overrides=None, overrides_must_match=True):
     r'''This function implements the HyperPyYAML syntax
 
     The purpose for this syntax is a compact, structured hyperparameter and
@@ -149,9 +147,7 @@ def load_hyperpyyaml(
     >>> params["thing"]
     Counter({'b': 3})
     '''
-    yaml_stream = resolve_references(
-        yaml_stream, overrides, overrides_must_match
-    )
+    yaml_stream = resolve_references(yaml_stream, overrides, overrides_must_match)
 
     # Parse flat tuples (no nesting of lists, dicts)
     yaml.Loader.add_constructor(tag="!tuple", constructor=_make_tuple)
@@ -299,11 +295,21 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
     ruamel_yaml = ruamel.yaml.YAML()
     preview = ruamel_yaml.load(yaml_stream)
 
+    # Apply override changes to the preview tree
     if overrides is not None and overrides != "":
         if isinstance(overrides, str):
             overrides = ruamel_yaml.load(overrides)
-        recursive_update(preview, overrides, must_match=overrides_must_match)
-    _walk_tree_and_resolve("root", preview, preview, overrides, file_path)
+        try:
+            recursive_update(preview, overrides, must_match=overrides_must_match)
+        except TypeError:
+            raise ValueError(
+                "The structure of the overrides doesn't match "
+                "the structure of the document: ",
+                overrides,
+            )
+
+    # Resolve all !ref and !copy and !include tags
+    _walk_tree_and_resolve("root", preview, preview, file_path)
 
     # Dump back to string so we can load with bells and whistles
     yaml_stream = StringIO()
@@ -313,7 +319,7 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
     return yaml_stream
 
 
-def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
+def _walk_tree_and_resolve(key, current_node, tree, file_path):
     """A recursive function for resolving ``!ref`` and ``!copy`` tags.
 
     Loads additional yaml files if ``!include:`` tags are used.
@@ -327,8 +333,6 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
         A node in the yaml tree loaded with ruamel.yaml.
     tree : node
         The base node in the yaml tree loaded with ruamel.yaml.
-    overrides : dict
-        A set of overrides to pass to any ``!includes:`` files.
     file_path : str
         The location of the directory storing the main yaml file
 
@@ -342,17 +346,13 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
     if isinstance(current_node, list):
         for i, sub_node in enumerate(current_node):
             sub_key = i if key == "root" else f"{key}[{i}]"
-            current_node[i] = _walk_tree_and_resolve(
-                sub_key, sub_node, tree, overrides, file_path
-            )
+            current_node[i] = _walk_tree_and_resolve(sub_key, sub_node, tree, file_path)
 
     # Walk mapping and resolve.
     elif isinstance(current_node, dict):
         for k, sub_node in current_node.items():
             sub_key = k if key == "root" else f"{key}[{k}]"
-            current_node[k] = _walk_tree_and_resolve(
-                sub_key, sub_node, tree, overrides, file_path
-            )
+            current_node[k] = _walk_tree_and_resolve(sub_key, sub_node, tree, file_path)
 
     # Base case, handle tags
     if hasattr(current_node, "tag"):
@@ -379,17 +379,14 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
             if file_path is not None:
                 filename = os.path.join(file_path, filename)
 
-            # Update overrides with child keys
-            if isinstance(current_node, dict):
-                if overrides:
-                    recursive_update(overrides, current_node)
-                else:
-                    overrides = dict(current_node)
-                with open(filename) as f:
-                    included_yaml = resolve_references(f, overrides)
-            else:
-                with open(filename) as f:
-                    included_yaml = resolve_references(f)
+            # Turn current node into overrides dict for included file
+            try:
+                overrides = dict(current_node)
+            except TypeError:
+                overrides = {}
+
+            with open(filename) as f:
+                included_yaml = resolve_references(f, overrides)
 
             # Append resolved yaml to current node
             ruamel_yaml = ruamel.yaml.YAML()
@@ -468,9 +465,7 @@ def _construct_module(loader, module_name, node):
     if args != [] or kwargs != {}:
         raise ValueError("Cannot pass args to module")
     if not inspect.ismodule(module):
-        raise ValueError(
-            f"!module:{module_name} should be module, but is {module}"
-        )
+        raise ValueError(f"!module:{module_name} should be module, but is {module}")
 
     return module
 
@@ -690,14 +685,19 @@ def recursive_update(d, u, must_match=False):
     >>> d
     {'a': 1, 'b': {'c': 2, 'd': 3}}
     """
+
+    # Ensure input type is correct
+    if not isinstance(d, collections.abc.Mapping):
+        raise TypeError(f"Expected to update a mapping, but got: {d}")
+    if not isinstance(u, collections.abc.Mapping):
+        raise TypeError(f"Expected a mapping to use for update, but got {u}")
+
     # TODO: Consider cases where u has branch off k, but d does not.
     # e.g. d = {"a":1}, u = {"a": {"b": 2 }}
     for k, v in u.items():
         if isinstance(v, collections.abc.Mapping) and k in d:
             recursive_update(d.get(k, {}), v)
         elif must_match and k not in d:
-            raise KeyError(
-                f"Override '{k}' not found in: {[key for key in d.keys()]}"
-            )
+            raise KeyError(f"Override '{k}' not found in: {[key for key in d.keys()]}")
         else:
             d[k] = v
