@@ -199,7 +199,7 @@ def test_load_hyperpyyaml(tmpdir):
 
     # Import
     imported_yaml = """
-    a: !PLACEHOLDER
+    a: 10
     b: !PLACEHOLDER
     c: !ref <a> // <b>
     """
@@ -211,18 +211,25 @@ def test_load_hyperpyyaml(tmpdir):
         w.write(imported_yaml)
 
     yaml = f"""
-    a: 3
     b: !PLACEHOLDER
     import: !include:{test_yaml_file}
-        a: !ref <a>
+        a: 3
         b: !ref <b>
     d: !ref <import[c]>
     """
 
     things = load_hyperpyyaml(yaml, {"b": 3})
-    assert things["a"] == things["b"]
+    assert things["import"]["a"] == things["b"]
     assert things["import"]["c"] == 1
     assert things["d"] == things["import"]["c"]
+
+    things = load_hyperpyyaml(yaml, {"import": {"a": 6}, "b": 3})
+    assert things["import"]["a"] == 6
+    assert things["import"]["c"] == 2
+
+    things = load_hyperpyyaml(yaml, "import:\n  a: 6\nb: 3\nd: 5")
+    assert things["import"]["a"] == 6
+    assert things["d"] == 5
 
     # Dumping
     dump_dict = {
