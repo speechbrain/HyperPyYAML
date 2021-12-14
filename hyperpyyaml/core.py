@@ -182,7 +182,6 @@ def load_hyperpyyaml(
         True,
     )  # deep=True
     hparams = yaml.load(yaml_stream, Loader=yaml.Loader)
-    print(hparams)
     # Change back to normal default:
     yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
         False,
