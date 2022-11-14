@@ -177,6 +177,47 @@ def test_load_hyperpyyaml(tmpdir):
     assert things["c"].kwargs["thing1"]() == "a string"
     assert things["c"].specific_key() == "a string"
 
+    # Applyref tag
+    yaml = """
+    a: 1
+    b: 2
+    c: !applyref:sum [[!ref <a>, !ref <b>]]
+    d: !ref <c>-<c>
+    """
+    things = load_hyperpyyaml(yaml)
+    assert things["d"] == 0
+
+    # Applyref method
+    yaml = """
+    a: "A STRING"
+    common_kwargs:
+        thing1: !ref <a.lower>
+        thing2: 2
+    c: !applyref:hyperpyyaml.TestThing.from_keys
+        args:
+            - 1
+            - 2
+        kwargs: !ref <common_kwargs>
+    """
+    things = load_hyperpyyaml(yaml)
+    assert things["c"][:12] == "<hyperpyyaml"
+
+    yaml = """
+    a: "A STRING"
+    common_kwargs:
+        thing1: !ref <a.lower>
+        thing2: 2
+    c: !applyref:hyperpyyaml.TestThing.from_keys
+        _args: []
+        _kwargs:
+            args:
+                - 1
+                - 2
+            kwargs: !ref <common_kwargs>
+    """
+    things = load_hyperpyyaml(yaml)
+    assert things["c"][:12] == "<hyperpyyaml"
+
     # Refattr:
     yaml = """
     thing1: "A string"

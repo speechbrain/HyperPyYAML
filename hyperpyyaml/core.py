@@ -3,6 +3,7 @@
 Authors
  * Peter Plantinga 2020
  * Aku Rouhe 2020
+ * Jianchen Li 2022
 """
 
 import re
@@ -15,10 +16,10 @@ import inspect
 import functools
 import collections
 import ruamel.yaml
-from ruamel.yaml.representer import RepresenterError
 import operator as op
 from io import StringIO
 from collections import OrderedDict
+from ruamel.yaml.representer import RepresenterError
 
 
 # NOTE: Empty dict as default parameter is fine here since overrides are never
@@ -164,7 +165,7 @@ def load_hyperpyyaml(
     yaml.Loader.add_multi_constructor("!new:", _construct_object)
     yaml.Loader.add_multi_constructor("!name:", _construct_name)
     yaml.Loader.add_multi_constructor("!module:", _construct_module)
-    # yaml.Loader.add_multi_constructor("!apply:", _apply_function)
+    yaml.Loader.add_multi_constructor("!apply:", _apply_function)
 
     # NOTE: Here we apply a somewhat dirty trick.
     # We change the yaml object construction to be deep=True by default.
@@ -325,7 +326,7 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
 
 
 def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
-    """A recursive function for resolving ``!ref`` and ``!copy`` tags.
+    """A recursive function for resolving ``!ref``, ``!copy`` and ``!applyref`` tags.
 
     Loads additional yaml files if ``!include:`` tags are used.
     Also throws an error if ``!PLACEHOLDER`` tags are encountered.
@@ -385,7 +386,7 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
 
         # Include external yaml files
         elif tag_value.startswith("!include:"):
-            filename = tag_value[len("!include:") :]
+            filename = tag_value[len("!include:"):]
 
             # Update overrides with child keys
             if isinstance(current_node, dict):
@@ -404,9 +405,9 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
             current_node = ruamel_yaml.load(included_yaml)
 
         # Get the return value of a function
-        elif tag_value.startswith("!apply:"):
-            function = tag_value[len("!apply:") :]
-            current_node = _apply_function(function, current_node)
+        elif tag_value.startswith("!applyref:"):
+            function = tag_value[len("!applyref:"):]
+            current_node = _applyref_function(function, current_node)
 
     # Return node after all resolution is done.
     return current_node
@@ -441,10 +442,12 @@ def _get_args(node):
         # Example:
         #     seed: 1024
         #      __set_seed: !apply:libs.support.utils.set_all_seed
-        #         args: [!ref <seed>]
-        #         kwargs: {deterministic: True}
-        if "args" in kwargs and "kwargs" in kwargs and len(kwargs) == 2:
-            return kwargs['args'], kwargs['kwargs']
+        #         _args:
+        #             - !ref <seed>
+        #         _kwargs:
+        #             deterministic: True
+        if "_args" in kwargs and "_kwargs" in kwargs and len(kwargs) == 2:
+            return kwargs['_args'], kwargs['_kwargs']
         else:
             return [], kwargs
     # SequenceNode
@@ -513,26 +516,7 @@ def _construct_module(loader, module_name, node):
     return module
 
 
-# def _apply_function(loader, callable_string, node):
-#     callable_ = pydoc.locate(callable_string)
-#     if callable_ is None:
-#         raise ImportError("There is no such callable as %s" % callable_string)
-# 
-#     if not inspect.isroutine(callable_):
-#         raise ValueError(
-#             f"!apply:{callable_string} should be a callable, but is {callable_}"
-#         )
-# 
-#     try:
-#         args, kwargs = _load_node(loader, node)
-#         return callable_(*args, **kwargs)
-#     except TypeError as e:
-#         err_msg = "Invalid argument to callable %s" % callable_string
-#         e.args = (err_msg, *e.args)
-#         raise
-
-
-def _apply_function(callable_string, node):
+def _apply_function(loader, callable_string, node):
     callable_ = pydoc.locate(callable_string)
     if callable_ is None:
         raise ImportError("There is no such callable as %s" % callable_string)
@@ -540,6 +524,25 @@ def _apply_function(callable_string, node):
     if not inspect.isroutine(callable_):
         raise ValueError(
             f"!apply:{callable_string} should be a callable, but is {callable_}"
+        )
+
+    try:
+        args, kwargs = _load_node(loader, node)
+        return callable_(*args, **kwargs)
+    except TypeError as e:
+        err_msg = "Invalid argument to callable %s" % callable_string
+        e.args = (err_msg, *e.args)
+        raise
+
+
+def _applyref_function(callable_string, node):
+    callable_ = pydoc.locate(callable_string)
+    if callable_ is None:
+        raise ImportError("There is no such callable as %s" % callable_string)
+
+    if not inspect.isroutine(callable_):
+        raise ValueError(
+            f"!applyref:{callable_string} should be a callable, but is {callable_}"
         )
 
     try:
