@@ -18,7 +18,6 @@ import collections
 import ruamel.yaml
 import operator as op
 from io import StringIO
-from collections import OrderedDict
 from ruamel.yaml.representer import RepresenterError
 
 
@@ -309,18 +308,13 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
     _walk_tree_and_resolve("root", preview, preview, overrides, file_path)
 
     yaml_stream = StringIO()
-    while True:
-        try:
-            ruamel_yaml = ruamel.yaml.YAML()
-            # Dump back to string so we can load with bells and whistles
-            ruamel_yaml.dump(preview, yaml_stream)
-            yaml_stream.seek(0)
-            break
-        except RepresenterError as e:
-            error_obj = str(e).split(': ')[1]
-            for key, value in preview._items():
-                if str(value) == error_obj:
-                    preview.update({key: str(value)})
+    try:
+        # Dump back to string so we can load with bells and whistles
+        ruamel_yaml.dump(preview, yaml_stream)
+        yaml_stream.seek(0)
+    except RepresenterError as e:
+        e.args = (e.args[0] + ". Please use the !apply tag instead.",)
+        raise e.with_traceback(e.__traceback__)
 
     return yaml_stream
 
@@ -433,27 +427,24 @@ def _load_node(loader, node):
 
 def _get_args(node):
     # No arguments
-    if str(node) == '':
+    if not str(node):
         return [], {}
     # MappingNode
-    if str(node)[0] == 'o':
-        kwargs = OrderedDict(node)
+    if isinstance(node, dict):
         # Pass the positional and keyword arguments at the same time. Like `!!python/object/apply:module.function` in pyyaml
         # Example:
-        #     seed: 1024
-        #      __set_seed: !apply:libs.support.utils.set_all_seed
-        #         _args:
-        #             - !ref <seed>
-        #         _kwargs:
-        #             deterministic: True
-        if "_args" in kwargs and "_kwargs" in kwargs and len(kwargs) == 2:
-            return kwargs['_args'], kwargs['_kwargs']
+        # f: !applyref:sorted
+        #     _args:
+        #         - [3, 4, 1, 2]
+        #     _kwargs:
+        #         reverse: False
+        if "_args" in node and "_kwargs" in node and len(node) == 2:
+            return node['_args'], node['_kwargs']
         else:
-            return [], kwargs
+            return [], node
     # SequenceNode
-    elif str(node)[0] == '[':
-        args = list(node)
-        return args, {}
+    elif isinstance(node, list):
+        return node, {}
     else:
         raise ValueError
 

@@ -193,6 +193,37 @@ Counter({'a': 4})
 Note that `!ref` makes only a shallow copy, so updating `foo`
 also updates `bar`. If you want a deep copy, use the `!copy` tag.
 
+There are some issues (#7 #11) mentioning that `!ref` cannot refer to the return value of `!apply` function. 
+Thus we provide another `!applyref` tag to work with `!ref`, which can be used in four ways:
+
+```
+# 1. Pass the positional and keyword arguments at the same time. Like `!!python/object/apply:module.function` in pyyaml
+c: !applyref:sorted
+    _args: 
+        - [3, 4, 1, 2]
+    _kwargs:
+        reverse: False
+d: !ref <c>-<c>
+
+# 2. Only pass the keyword arguments
+e: !applyref:random.randint
+    a: 1
+    b: 3
+f: !ref <e><e>
+
+# 3. Only pass the positional arguments
+g: !applyref:random.randint
+    - 1
+    - 3
+h: !ref <g><g>
+
+# 4. No arguments
+i: !applyref:random.random
+j: !ref <i><i>
+```
+
+Note that `!applyref` cannot return an object, otherwise the `RepresenterError` will be raised.
+
 ### Tuples
 
 One last minor extension to the yaml syntax we've made is to implicitly
