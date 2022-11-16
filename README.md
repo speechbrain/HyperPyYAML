@@ -196,7 +196,7 @@ also updates `bar`. If you want a deep copy, use the `!copy` tag.
 There are some issues (#7 #11) mentioning that `!ref` cannot refer to the return value of `!apply` function. 
 Thus we provide another `!applyref` tag to work with `!ref`, which can be used in four ways:
 
-```
+```yaml
 # 1. Pass the positional and keyword arguments at the same time. Like `!!python/object/apply:module.function` in pyyaml
 c: !applyref:sorted
     _args: 
