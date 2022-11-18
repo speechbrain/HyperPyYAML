@@ -179,44 +179,34 @@ def test_load_hyperpyyaml(tmpdir):
 
     # Applyref tag
     yaml = """
-    a: 1
-    b: 2
-    c: !applyref:sum [[!ref <a>, !ref <b>]]
-    d: !ref <c>-<c>
-    """
-    things = load_hyperpyyaml(yaml)
-    assert things["d"] == 0
-
-    # Applyref method
-    yaml = """
-    a: "A STRING"
-    common_kwargs:
-        thing1: !ref <a.lower>
-        thing2: 2
-    c: !applyref:hyperpyyaml.TestThing.from_keys
-        args:
-            - 1
-            - 2
-        kwargs: !ref <common_kwargs>
-    """
-    things = load_hyperpyyaml(yaml)
-    assert things["c"][:12] == "<hyperpyyaml"
-
-    yaml = """
-    a: "A STRING"
-    common_kwargs:
-        thing1: !ref <a.lower>
-        thing2: 2
-    c: !applyref:hyperpyyaml.TestThing.from_keys
-        _args: []
+    c: !applyref:sorted
+        _args:
+            - [3, 4, 1, 2]
         _kwargs:
-            args:
-                - 1
-                - 2
-            kwargs: !ref <common_kwargs>
+            reverse: False
+    d: !ref <c>-<c>
+
+    # 2. Only pass the keyword arguments
+    e: !applyref:random.randint
+        a: 1
+        b: 3
+    f: !ref <e><e>
+
+    # 3. Only pass the positional arguments
+    g: !applyref:random.randint
+        - 1
+        - 3
+    h: !ref <g><g>
+
+    # 4. No arguments
+    i: !applyref:random.random
+    j: !ref <i>
     """
     things = load_hyperpyyaml(yaml)
-    assert things["c"][:12] == "<hyperpyyaml"
+    assert things["d"] == "[1, 2, 3, 4]-[1, 2, 3, 4]"
+    assert things["f"] in [11, 22, 33]
+    assert things["h"] in [11, 22, 33]
+    assert things["j"] < 1 and things["j"] >= 0
 
     # Refattr:
     yaml = """
