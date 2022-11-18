@@ -3,6 +3,7 @@
 Authors
  * Peter Plantinga 2020
  * Aku Rouhe 2020
+ * Jianchen Li 2022
 """
 
 import re
@@ -17,6 +18,7 @@ import collections
 import ruamel.yaml
 import operator as op
 from io import StringIO
+from ruamel.yaml.representer import RepresenterError
 
 
 # NOTE: Empty dict as default parameter is fine here since overrides are never
@@ -305,16 +307,20 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
         recursive_update(preview, overrides, must_match=overrides_must_match)
     _walk_tree_and_resolve("root", preview, preview, overrides, file_path)
 
-    # Dump back to string so we can load with bells and whistles
     yaml_stream = StringIO()
-    ruamel_yaml.dump(preview, yaml_stream)
-    yaml_stream.seek(0)
+    try:
+        # Dump back to string so we can load with bells and whistles
+        ruamel_yaml.dump(preview, yaml_stream)
+        yaml_stream.seek(0)
+    except RepresenterError as e:
+        e.args = (e.args[0] + ". Please use the !apply tag instead.",)
+        raise e.with_traceback(e.__traceback__)
 
     return yaml_stream
 
 
 def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
-    """A recursive function for resolving ``!ref`` and ``!copy`` tags.
+    """A recursive function for resolving ``!ref``, ``!copy`` and ``!applyref`` tags.
 
     Loads additional yaml files if ``!include:`` tags are used.
     Also throws an error if ``!PLACEHOLDER`` tags are encountered.
@@ -374,7 +380,7 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
 
         # Include external yaml files
         elif tag_value.startswith("!include:"):
-            filename = tag_value[len("!include:") :]
+            filename = tag_value[len("!include:"):]
 
             # Update overrides with child keys
             if isinstance(current_node, dict):
@@ -391,6 +397,11 @@ def _walk_tree_and_resolve(key, current_node, tree, overrides, file_path):
             # Append resolved yaml to current node
             ruamel_yaml = ruamel.yaml.YAML()
             current_node = ruamel_yaml.load(included_yaml)
+
+        # Get the return value of a function
+        elif tag_value.startswith("!applyref:"):
+            function = tag_value[len("!applyref:"):]
+            current_node = _applyref_function(function, current_node)
 
     # Return node after all resolution is done.
     return current_node
@@ -412,6 +423,30 @@ def _load_node(loader, node):
         args = loader.construct_sequence(node, deep=True)
         return args, {}
     return [], {}
+
+
+def _get_args(node):
+    # No arguments
+    if not str(node):
+        return [], {}
+    # MappingNode
+    if isinstance(node, dict):
+        # Pass the positional and keyword arguments at the same time. Like `!!python/object/apply:module.function` in pyyaml
+        # Example:
+        # f: !applyref:sorted
+        #     _args:
+        #         - [3, 4, 1, 2]
+        #     _kwargs:
+        #         reverse: False
+        if "_args" in node and "_kwargs" in node and len(node) == 2:
+            return node['_args'], node['_kwargs']
+        else:
+            return [], node
+    # SequenceNode
+    elif isinstance(node, list):
+        return node, {}
+    else:
+        raise ValueError
 
 
 def _construct_object(loader, callable_string, node):
@@ -485,6 +520,27 @@ def _apply_function(loader, callable_string, node):
     try:
         args, kwargs = _load_node(loader, node)
         return callable_(*args, **kwargs)
+    except TypeError as e:
+        err_msg = "Invalid argument to callable %s" % callable_string
+        e.args = (err_msg, *e.args)
+        raise
+
+
+def _applyref_function(callable_string, node):
+    callable_ = pydoc.locate(callable_string)
+    if callable_ is None:
+        raise ImportError("There is no such callable as %s" % callable_string)
+
+    if not inspect.isroutine(callable_):
+        raise ValueError(
+            f"!applyref:{callable_string} should be a callable, but is {callable_}"
+        )
+
+    try:
+        args, kwargs = _get_args(node)
+        out = callable_(*args, **kwargs)
+        # If the return type is an object, it may not be serialized by ruamel_yaml.dump.
+        return out
     except TypeError as e:
         err_msg = "Invalid argument to callable %s" % callable_string
         e.args = (err_msg, *e.args)
