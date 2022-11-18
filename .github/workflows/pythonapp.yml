@@ -24,7 +24,6 @@ jobs:
               run: python -c "import sys; print(sys.version)"
             - name: Full dependencies
               run: |
-                  pip install -r requirements.txt
                   pip install --editable .
             - name: Run tests with pytest
               run: |
