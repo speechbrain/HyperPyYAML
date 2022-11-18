@@ -179,6 +179,7 @@ def test_load_hyperpyyaml(tmpdir):
 
     # Applyref tag
     yaml = """
+    # 1. Pass the positional and keyword arguments at the same time. Like `!!python/object/apply:module.function` in pyyaml
     c: !applyref:sorted
         _args:
             - [3, 4, 1, 2]
