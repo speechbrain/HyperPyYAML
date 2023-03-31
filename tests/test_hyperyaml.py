@@ -177,6 +177,38 @@ def test_load_hyperpyyaml(tmpdir):
     assert things["c"].kwargs["thing1"]() == "a string"
     assert things["c"].specific_key() == "a string"
 
+    # Applyref tag
+    yaml = """
+    # 1. Pass the positional and keyword arguments at the same time. Like `!!python/object/apply:module.function` in pyyaml
+    c: !applyref:sorted
+        _args:
+            - [3, 4, 1, 2]
+        _kwargs:
+            reverse: False
+    d: !ref <c>-<c>
+
+    # 2. Only pass the keyword arguments
+    e: !applyref:random.randint
+        a: 1
+        b: 3
+    f: !ref <e><e>
+
+    # 3. Only pass the positional arguments
+    g: !applyref:random.randint
+        - 1
+        - 3
+    h: !ref <g><g>
+
+    # 4. No arguments
+    i: !applyref:random.random
+    j: !ref <i>
+    """
+    things = load_hyperpyyaml(yaml)
+    assert things["d"] == "[1, 2, 3, 4]-[1, 2, 3, 4]"
+    assert things["f"] in [11, 22, 33]
+    assert things["h"] in [11, 22, 33]
+    assert things["j"] < 1 and things["j"] >= 0
+
     # Refattr:
     yaml = """
     thing1: "A string"
