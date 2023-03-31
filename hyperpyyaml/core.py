@@ -24,7 +24,7 @@ from ruamel.yaml.representer import RepresenterError
 # NOTE: Empty dict as default parameter is fine here since overrides are never
 # modified
 def load_hyperpyyaml(
-    yaml_stream, overrides=None, overrides_must_match=True,
+    yaml_stream, overrides=None, overrides_must_match=True, loader=ruamel.yaml.Loader
 ):
     r'''This function implements the HyperPyYAML syntax
 
@@ -134,6 +134,9 @@ def load_hyperpyyaml(
         a corresponding key in the yaml_stream.
     return_dict : bool
         Whether to return a dictionary rather than the default namespace.
+    loader : Loader
+        Use to parse the yaml_stream, could be `ruamel.yaml.Loader`,
+        `yaml.Loader`, etc.
 
     Returns
     -------
@@ -156,15 +159,15 @@ def load_hyperpyyaml(
     )
 
     # Parse flat tuples (no nesting of lists, dicts)
-    yaml.Loader.add_constructor(tag="!tuple", constructor=_make_tuple)
+    loader.add_constructor(tag="!tuple", constructor=_make_tuple)
     tuple_pattern = re.compile(r"^\(.*\)$")
-    yaml.Loader.add_implicit_resolver("!tuple", tuple_pattern, first="(")
+    loader.add_implicit_resolver("!tuple", tuple_pattern, first="(")
 
     # Parse shortcuts to `new`, `name`, and `module`
-    yaml.Loader.add_multi_constructor("!new:", _construct_object)
-    yaml.Loader.add_multi_constructor("!name:", _construct_name)
-    yaml.Loader.add_multi_constructor("!module:", _construct_module)
-    yaml.Loader.add_multi_constructor("!apply:", _apply_function)
+    loader.add_multi_constructor("!new:", _construct_object)
+    loader.add_multi_constructor("!name:", _construct_name)
+    loader.add_multi_constructor("!module:", _construct_module)
+    loader.add_multi_constructor("!apply:", _apply_function)
 
     # NOTE: Here we apply a somewhat dirty trick.
     # We change the yaml object construction to be deep=True by default.
@@ -181,9 +184,15 @@ def load_hyperpyyaml(
     yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
         True,
     )  # deep=True
-    hparams = yaml.load(yaml_stream, Loader=yaml.Loader)
+    ruamel.yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
+        True,
+    )  # deep=True
+    hparams = yaml.load(yaml_stream, Loader=loader)
     # Change back to normal default:
     yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
+        False,
+    )  # deep=False
+    ruamel.yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
         False,
     )  # deep=False
 
@@ -416,10 +425,16 @@ def _make_tuple(loader, node):
 
 
 def _load_node(loader, node):
-    if isinstance(node, yaml.MappingNode):
+    if (
+            isinstance(node, yaml.MappingNode) or
+            isinstance(node, ruamel.yaml.MappingNode)
+    ):
         kwargs = loader.construct_mapping(node, deep=True)
         return [], kwargs
-    elif isinstance(node, yaml.SequenceNode):
+    elif (
+            isinstance(node, yaml.SequenceNode) or
+            isinstance(node, ruamel.yaml.SequenceNode)
+    ):
         args = loader.construct_sequence(node, deep=True)
         return args, {}
     return [], {}
