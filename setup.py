@@ -18,5 +18,5 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
     ],
     packages=["hyperpyyaml"],
-    install_requires=["pyyaml>=5.1", "ruamel.yaml>=0.17.8"],
+    install_requires=["pyyaml>=5.1", "ruamel.yaml>=0.17.8, <=0.17.28"],
 )
