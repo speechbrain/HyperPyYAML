@@ -608,7 +608,9 @@ def deref(ref, full_tree, copy_mode=False):
     if attr is not None:
         node = ruamel.yaml.comments.CommentedSeq()
         node += [branch, attr]
-        node.yaml_set_tag("!apply:getattr")
+        node.yaml_set_ctag(
+            ruamel.yaml.Tag(suffix="!apply:getattr")
+        )
         return node
 
     return branch
