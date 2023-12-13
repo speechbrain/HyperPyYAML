@@ -17,6 +17,12 @@ up python files for data analysis to just the bare algorithm.
 * [How to use HyperPyYAML](#how-to-use-hyperpyyaml)
 * [Conclusion](#conclusion)
 
+### Security note
+Loading HyperPyYAML allows arbitrary code execution. 
+This is a feature: HyperPyYAML allows you to construct *anything* and *everything*
+you need in your experiment.
+However, take care to verify any untrusted recipes' YAML files just as you would verify the Python code.
+
 YAML basics
 -----------
 
