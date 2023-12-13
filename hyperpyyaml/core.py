@@ -309,7 +309,7 @@ def resolve_references(yaml_stream, overrides=None, overrides_must_match=False):
     preview = ruamel_yaml.load(yaml_stream)
 
     # Apply override changes to the preview tree
-    if overrides is not None and overrides != "":
+    if overrides is not None and len(overrides) > 0:
         if isinstance(overrides, str):
             overrides = ruamel_yaml.load(overrides)
         try:
