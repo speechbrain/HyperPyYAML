@@ -186,6 +186,10 @@ def load_hyperpyyaml(
     ruamel.yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
         True,
     )  # deep=True
+    # ruamel.yaml >= 0.19 added max_depth checking in the composer,
+    # but the legacy Loader class does not define this attribute.
+    if not hasattr(loader, 'max_depth'):
+        loader.max_depth = 0
     hparams = yaml.load(yaml_stream, Loader=loader)
     # Change back to normal default:
     yaml.constructor.BaseConstructor.construct_object.__defaults__ = (
